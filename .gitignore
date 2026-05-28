@@ -1,0 +1,6 @@
+.env
+prompt_temp.txt
+venv/
+node_modules/
+package-lock.json
+package.json
