@@ -17,7 +17,7 @@ def main():
         ["Centro de Comando", "Dashboard", "Agente LLM (Gemini)", "OpenRouter (Multi-Modelos)", "Automação & Scraping", "Configurações"]
     )
     
-    add_vertical_space(5)
+    st.sidebar.space(height=200)
     st.sidebar.info("Carvalima Agent Central v1.0")
 
     if menu == "Centro de Comando":
