@@ -5,30 +5,27 @@ import os
 
 class AutonomousBrowser:
     def __init__(self, model_name="google/gemini-2.0-flash-001"):
-        # Usamos uma forma mais compatível de carregar o modelo para evitar conflitos de versão
+        # Importações dentro do init para evitar conflitos de versão globais
         api_key = os.getenv("api-key-openrouter") or os.getenv("OPENROUTER_API_KEY")
         
+        # Mapeamento de nomes para garantir compatibilidade
+        if "gemini-1.5-flash" in model_name: model_name = "google/gemini-2.0-flash-001"
+        
         if api_key:
-            try:
-                # Tenta usar o wrapper oficial se disponível
-                from langchain_openai import ChatOpenAI
-                self.llm = ChatOpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=api_key,
-                    model=model_name
-                )
-            except (ImportError, Exception):
-                # Fallback: Usamos o wrapper da comunidade ou direto se o anterior falhar
-                from langchain_community.chat_models import ChatOpenAI as CommunityChatOpenAI
-                self.llm = CommunityChatOpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    openai_api_key=api_key,
-                    model_name=model_name
-                )
+            # Para o browser-use, o melhor é usar o ChatOpenAI padrão do LangChain
+            # configurado para o OpenRouter
+            from langchain_openai import ChatOpenAI
+            self.llm = ChatOpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key,
+                model=model_name,
+                # Desativa verificações específicas que podem causar o erro 'provider'
+                default_headers={"HTTP-Referer": "https://github.com/MaxxArtes/central_agentes"}
+            )
         else:
-            # Fallback para Gemini direto
+            # Fallback para Gemini direto (via CLI ou Key)
             from langchain_google_genai import ChatGoogleGenerativeAI
-            self.llm = ChatGoogleGenerativeAI(model=model_name)
+            self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
     
     async def run_task(self, task_description):
         agent = Agent(
