@@ -82,20 +82,22 @@ def main():
             st.warning("Por favor, configure sua chave 'api-key-openrouter' no arquivo .env")
         else:
             model_options = [
+                "openrouter/free",
                 "google/gemini-2.0-flash-001",
                 "openai/gpt-4o",
                 "anthropic/claude-3.5-sonnet",
                 "deepseek/deepseek-chat",
                 "meta-llama/llama-3.1-70b-instruct"
             ]
-            selected_model = st.selectbox("Escolha o Modelo:", model_options)
+            selected_model = st.selectbox("Escolha o Modelo:", model_options, help="A opção 'openrouter/free' roteia automaticamente para o melhor modelo gratuito disponível.")
+            use_reason = st.checkbox("Habilitar Raciocínio (Chain of Thought)", value=True, help="O modelo pensará passo a passo antes de responder.")
             prompt = st.text_area("Digite sua mensagem:", height=100)
             
             if st.button("Enviar"):
                 with st.spinner(f"Processando com {selected_model}..."):
                     try:
                         agent = OpenRouterAgent(model_name=selected_model)
-                        response = agent.ask(prompt)
+                        response = agent.ask(prompt, use_reasoning=use_reason)
                         st.markdown(f"### Resposta ({selected_model}):")
                         st.write(response)
                     except Exception as e:
