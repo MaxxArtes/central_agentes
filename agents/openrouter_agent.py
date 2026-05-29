@@ -3,9 +3,10 @@ import os
 
 class OpenRouterAgent:
     def __init__(self, model_name="google/gemini-2.0-flash-001"):
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        # Tenta api-key-openrouter primeiro (nome no seu .env)
+        api_key = os.getenv("api-key-openrouter") or os.getenv("OPENROUTER_API_KEY")
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY not found in environment variables.")
+            raise ValueError("Chave do OpenRouter não encontrada no .env (procurei por 'api-key-openrouter')")
         
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",

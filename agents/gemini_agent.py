@@ -3,7 +3,8 @@ import os
 
 class GeminiAgent:
     def __init__(self, model_name="gemini-1.5-flash"):
-        api_key = os.getenv("GOOGLE_API_KEY")
+        # Tenta GEMINI_API_KEY primeiro (nome no seu .env)
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         
         # Tenta configurar o genai. 
         # Se a API Key existir, usa ela. 

@@ -11,33 +11,55 @@ st.set_page_config(page_title="Central de Agentes Carvalima", layout="wide")
 def main():
     st.sidebar.title("🤖 Central de Agentes")
     st.sidebar.markdown("---")
+    
     menu = st.sidebar.radio(
         "Menu Principal",
         ["Dashboard", "Agente LLM (Gemini)", "OpenRouter (Multi-Modelos)", "Automação & Scraping", "Configurações"]
     )
-
+    
     add_vertical_space(5)
     st.sidebar.info("Carvalima Agent Central v1.0")
 
     if menu == "Dashboard":
         st.title("📊 Painel de Controle")
         st.write("Bem-vindo à Central de Agentes Carvalima.")
-
+        
         col1, col2, col3 = st.columns(3)
         col1.metric("Agentes Ativos", "3")
         col2.metric("Tarefas Concluídas", "124")
         col3.metric("Tempo de Atividade", "99.9%")
-
+        
     elif menu == "Agente LLM (Gemini)":
-    ...
+        st.title("🧠 Agente de Inteligência")
+        st.write("Interaja com o modelo Gemini.")
+        
+        from agents.gemini_agent import GeminiAgent
+        
+        # Verifica se há chave no .env ou se está usando ADC (CLI)
+        has_auth = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        
+        if not has_auth:
+            st.info("💡 Usando autenticação automática via Google Cloud CLI (ADC).")
+        
+        prompt = st.text_area("O que deseja perguntar ao agente?", height=100)
+        if st.button("Enviar"):
+            with st.spinner("Pensando..."):
+                try:
+                    agent = GeminiAgent()
+                    response = agent.ask(prompt)
+                    st.markdown("### Resposta do Agente:")
+                    st.write(response)
+                except Exception as e:
+                    st.error(f"Erro ao inicializar o agente: {e}")
+
     elif menu == "OpenRouter (Multi-Modelos)":
         st.title("🌐 OpenRouter AI")
         st.write("Acesse centenas de modelos através do OpenRouter.")
-
+        
         from agents.openrouter_agent import OpenRouterAgent
-
-        if not os.getenv("OPENROUTER_API_KEY"):
-            st.warning("Por favor, configure sua OPENROUTER_API_KEY no arquivo .env")
+        
+        if not os.getenv("api-key-openrouter") and not os.getenv("OPENROUTER_API_KEY"):
+            st.warning("Por favor, configure sua chave 'api-key-openrouter' no arquivo .env")
         else:
             model_options = [
                 "google/gemini-2.0-flash-001",
@@ -48,7 +70,7 @@ def main():
             ]
             selected_model = st.selectbox("Escolha o Modelo:", model_options)
             prompt = st.text_area("Digite sua mensagem:", height=100)
-
+            
             if st.button("Enviar"):
                 with st.spinner(f"Processando com {selected_model}..."):
                     try:
@@ -58,25 +80,6 @@ def main():
                         st.write(response)
                     except Exception as e:
                         st.error(f"Erro: {e}")
-
-    elif menu == "Automação & Scraping":
-        st.write("Interaja com o modelo Gemini.")
-        
-        from agents.gemini_agent import GeminiAgent
-        
-        if not os.getenv("GOOGLE_API_KEY"):
-            st.warning("Por favor, configure sua GOOGLE_API_KEY no arquivo .env")
-        else:
-            prompt = st.text_area("O que deseja perguntar ao agente?", height=100)
-            if st.button("Enviar"):
-                with st.spinner("Pensando..."):
-                    try:
-                        agent = GeminiAgent()
-                        response = agent.ask(prompt)
-                        st.markdown("### Resposta do Agente:")
-                        st.write(response)
-                    except Exception as e:
-                        st.error(f"Erro ao inicializar o agente: {e}")
 
     elif menu == "Automação & Scraping":
         st.title("🌐 Automação Web")
@@ -97,7 +100,8 @@ def main():
     elif menu == "Configurações":
         st.title("⚙️ Configurações")
         st.write("Gerencie suas chaves de API e preferências.")
-        google_key = st.text_input("Google API Key", type="password", value=os.getenv("GOOGLE_API_KEY", ""))
+        google_key = st.text_input("Gemini API Key", type="password", value=os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", "")))
+        or_key = st.text_input("OpenRouter API Key", type="password", value=os.getenv("api-key-openrouter", os.getenv("OPENROUTER_API_KEY", "")))
         if st.button("Salvar"):
             st.success("Configurações salvas localmente (demonstração).")
 
