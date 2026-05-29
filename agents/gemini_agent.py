@@ -36,18 +36,22 @@ class GeminiAgent:
                 print(f"Aviso: Falha ao carregar login: {e}")
 
         # 2. Ponte de Emergência via OpenRouter
+        self._setup_openrouter_bridge()
+
+    def _setup_openrouter_bridge(self):
         try:
             try:
                 from agents.openrouter_agent import OpenRouterAgent
             except ImportError:
                 from openrouter_agent import OpenRouterAgent
             
-            or_model = f"google/{self.model_name}"
-            if "gemini-1.5-flash" in or_model: or_model = "google/gemini-2.0-flash-001"
-            if "gemini-1.5-pro" in or_model: or_model = "google/gemini-pro-1.5"
+            # Mapeamento robusto de IDs para OpenRouter
+            or_model = "google/gemini-2.0-flash-001" # Default seguro e rápido
+            if "pro" in self.model_name:
+                or_model = "google/gemini-pro-1.5-exp" # Versão experimental costuma estar ativa
             
             self.or_agent = OpenRouterAgent(model_name=or_model)
-            print(f"[{self.model_name}] Usando ponte OpenRouter (Pro limits via API).")
+            print(f"[{self.model_name}] Usando ponte OpenRouter ({or_model}).")
         except Exception as e:
             print(f"Erro ao inicializar ponte: {e}")
 
@@ -65,26 +69,15 @@ class GeminiAgent:
             )
             return response.text
         except Exception as e:
-            # Se falhar o login (ex: token expirado), tenta a ponte OpenRouter
-            if "400" in str(e) or "401" in str(e) or "403" in str(e):
-                try:
-                    try:
-                        from agents.openrouter_agent import OpenRouterAgent
-                    except ImportError:
-                        from openrouter_agent import OpenRouterAgent
-                        
-                    or_model = f"google/{self.model_name}"
-                    if "gemini-1.5-flash" in or_model: or_model = "google/gemini-flash-1.5"
-                    if "gemini-1.5-pro" in or_model: or_model = "google/gemini-pro-1.5"
-                    
-                    self.or_agent = OpenRouterAgent(model_name=or_model)
-                    return self.or_agent.ask(prompt)
-                except:
-                    pass
-            return f"Erro no Gemini: {str(e)}"
+            # Se falhar o login (ex: token expirado), tenta a ponte OpenRouter imediatamente
+            print(f"Erro no login nativo: {e}. Mudando para OpenRouter...")
+            self._setup_openrouter_bridge()
+            if hasattr(self, 'or_agent'):
+                return self.or_agent.ask(prompt)
+            return f"Erro fatal: {str(e)}"
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     agent = GeminiAgent()
-    print(agent.ask("Diga 'Login Pro ativo'."))
+    print(agent.ask("Diga 'OK'."))
