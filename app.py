@@ -14,31 +14,47 @@ def main():
     
     menu = st.sidebar.radio(
         "Menu Principal",
-        ["Centro de Comando", "Dashboard", "Agente LLM (Gemini)", "OpenRouter (Multi-Modelos)", "Automação & Scraping", "Configurações"]
+        ["Centro de Comando", "Dashboard", "Agente LLM (Gemini)", "Agente Rápido (Groq)", "OpenRouter (Multi-Modelos)", "Automação & Scraping", "Configurações"]
     )
     
     st.sidebar.markdown("<div style='height: 200px;'></div>", unsafe_allow_html=True)
-    st.sidebar.info("Carvalima Agent Central v1.0")
+    st.sidebar.info("Carvalima Agent Central v1.1")
 
     if menu == "Centro de Comando":
         st.title("🕹️ Centro de Comando (Orquestrador)")
-        st.write("Dê uma ordem complexa e o Gemini Pro decidirá como executar.")
+        st.write("Dê uma ordem complexa e a IA decidirá entre Navegação, Scraping ou Raciocínio Profundo.")
         
         from agents.orchestrator import CentralOrchestrator
         
-        user_input = st.text_input("Comando:", placeholder="Ex: Pesquise a cotação do dólar e me diga se é um bom momento para comprar.")
-        if st.button("Executar Ordem"):
-            if user_input:
+        # Inicializa o histórico de chat na sessão do Streamlit se não existir
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        # Exibe as mensagens anteriores
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Campo de entrada do chat (fica no fundo da página)
+        if prompt := st.chat_input("Ex: Pesquise a cotação do dólar e me diga se é um bom momento para comprar."):
+            # Adiciona a mensagem do usuário ao histórico e exibe
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Processamento do Orquestrador
+            with st.chat_message("assistant"):
                 with st.spinner("O Orquestrador está analisando e delegando tarefas..."):
                     try:
                         orch = CentralOrchestrator()
-                        result = orch.decide_and_execute(user_input)
-                        st.markdown("### Resultado Final:")
-                        st.write(result)
+                        result = orch.decide_and_execute(prompt)
+                        st.markdown(result)
+                        # Adiciona a resposta do assistente ao histórico
+                        st.session_state.messages.append({"role": "assistant", "content": result})
                     except Exception as e:
-                        st.error(f"Erro na execução: {e}")
-            else:
-                st.warning("Por favor, digite um comando.")
+                        error_msg = f"Erro na execução: {e}"
+                        st.error(error_msg)
+                        st.session_state.messages.append({"role": "assistant", "content": error_msg})
 
     elif menu == "Dashboard":
         st.title("📊 Painel de Controle")
@@ -71,6 +87,26 @@ def main():
                     st.write(response)
                 except Exception as e:
                     st.error(f"Erro ao inicializar o agente: {e}")
+
+    elif menu == "Agente Rápido (Groq)":
+        st.title("⚡ Agente Ultra-Rápido (Groq)")
+        st.write("Respostas quase instantâneas para tarefas diretas.")
+        
+        from agents.groq_agent import GroqAgent
+        
+        if not os.getenv("grop-api-key") and not os.getenv("GROQ_API_KEY"):
+            st.warning("Por favor, configure sua chave 'grop-api-key' no arquivo .env")
+        else:
+            prompt = st.text_area("O que deseja processar rapidamente?", height=100)
+            if st.button("Processar"):
+                with st.spinner("Groq está voando..."):
+                    try:
+                        agent = GroqAgent()
+                        response = agent.ask(prompt)
+                        st.markdown("### Resposta (Groq/Llama-3):")
+                        st.write(response)
+                    except Exception as e:
+                        st.error(f"Erro no Groq: {e}")
 
     elif menu == "OpenRouter (Multi-Modelos)":
         st.title("🌐 OpenRouter AI")

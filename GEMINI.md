@@ -12,3 +12,7 @@ Este projeto suporta dois métodos de autenticação para os agentes de IA:
     *   Comando: `gcloud auth application-default login`
 2.  **API Key (Fallback):** Adicione sua chave no arquivo `.env` como `GOOGLE_API_KEY`.
 
+## Persistência de Contexto
+
+- **Histórico:** Sempre salve resumos de ações importantes, mudanças de código e estado do projeto no arquivo `historico.txt`. Isso serve como um ponto de recuperação em caso de falhas de memória ou encerramento inesperado da sessão.
+

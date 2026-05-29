@@ -1,6 +1,28 @@
+# Arquivos de ambiente e segredos
+# Impede o envio de chaves de API e outras informações sensíveis
 .env
-prompt_temp.txt
+*.env
+oauth_creds.json
+*.secret
+
+# Histórico e Memória
+# Arquivos gerados em tempo de execução que não devem ir para o repositório
+memory.json
+historico.txt
+verificar.txt
+*.log
+
+# Cache e artefatos do Python
+__pycache__/
+*.pyc
+
+# Ambiente Virtual
+.venv
 venv/
-node_modules/
-package-lock.json
-package.json
+ENV/
+
+# Configurações de IDE
+.vscode/
+.idea/
+
+/node_modules

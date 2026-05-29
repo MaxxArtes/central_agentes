@@ -1,59 +1,65 @@
-from openai import OpenAI
-import os
+import requests
 import json
+import os
 
 class OpenRouterAgent:
-    # Mapeamento centralizado de modelos
-    MODEL_MAP = {
-        "gemini-1.5-flash": "google/gemini-2.0-flash-001",
-        "gemini-1.5-pro": "google/gemini-pro-1.5-exp",
-        "free": "openrouter/free",
-        "auto": "openrouter/free",
-        "google/gemini-pro-1.5": "google/gemini-pro-1.5-exp"
-    }
-
     def __init__(self, model_name="openrouter/free"):
-        # Tenta api-key-openrouter primeiro (nome no seu .env)
-        api_key = os.getenv("api-key-openrouter") or os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
+        # Tenta api-key-openrouter primeiro
+        self.api_key = os.getenv("api-key-openrouter") or os.getenv("OPENROUTER_API_KEY")
+        if not self.api_key:
             raise ValueError("Chave do OpenRouter não encontrada no .env")
         
-        # Resolve o ID real do modelo
-        self.model_name = self.MODEL_MAP.get(model_name, model_name)
-        
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-        )
-    
-    def ask(self, prompt, use_reasoning=True):
-        try:
-            # Prepara os parâmetros da requisição conforme a nova doc fornecida
-            payload = {
-                "model": self.model_name,
-                "messages": [{"role": "user", "content": prompt}],
-                "extra_headers": {
-                    "HTTP-Referer": "https://github.com/MaxxArtes/central_agentes",
-                    "X-Title": "Central de Agentes Carvalima",
-                }
-            }
-            
-            # Ativa o raciocínio se solicitado (Chain of Thought)
-            # Conforme a doc: "reasoning": {"enabled": True}
-            if use_reasoning:
-                payload["extra_body"] = {"reasoning": {"enabled": True}}
+        # O modelo padrão e mais estável recomendado é o free
+        self.model_name = "openrouter/free" if "gemini" in model_name.lower() or model_name == "free" else model_name
+        self.url = "https://openrouter.ai/api/v1/chat/completions"
 
-            response = self.client.chat.completions.create(**payload)
+    def ask(self, prompt, use_reasoning=True):
+        """
+        Envia uma requisição seguindo estritamente a documentação do OpenRouter.
+        """
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/MaxxArtes/central_agentes",
+            "X-Title": "Central de Agentes Carvalima",
+        }
+        
+        data = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        
+        # Implementação exata do parâmetro de raciocínio da documentação
+        if use_reasoning:
+            data["reasoning"] = {"enabled": True}
+
+        try:
+            response = requests.post(url=self.url, headers=headers, data=json.dumps(data), timeout=60)
+            response.raise_for_status()
+            result = response.json()
             
-            # A resposta pode conter reasoning_details se suportado pelo modelo
-            # content = response.choices[0].message.content
-            return response.choices[0].message.content
+            # Extrai a mensagem da resposta
+            message = result['choices'][0]['message']
+            content = message.get('content', '')
+            
+            # Formata a resposta para incluir o raciocínio se estiver disponível
+            # (conforme a doc: reasoning_details)
+            reasoning_details = message.get('reasoning_details')
+            if reasoning_details:
+                return f"🤔 **Raciocínio:**\n{reasoning_details}\n\n---\n\n{content}"
+            
+            return content
+            
         except Exception as e:
-            return f"Erro no OpenRouter ({self.model_name}): {str(e)}"
+            # Fallback de segurança para openrouter/free
+            if "404" in str(e) and self.model_name != "openrouter/free":
+                self.model_name = "openrouter/free"
+                return self.ask(prompt, use_reasoning)
+            return f"Erro na API OpenRouter ({self.model_name}): {str(e)}"
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
-    agent = OpenRouterAgent(model_name="free")
+    agent = OpenRouterAgent()
     print(f"Testando com: {agent.model_name}")
-    print(agent.ask("Explique brevemente o que é um multiagente."))
+    print(agent.ask("Qual é a raiz quadrada de 144? Pense passo a passo."))
