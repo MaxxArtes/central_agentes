@@ -14,13 +14,33 @@ def main():
     
     menu = st.sidebar.radio(
         "Menu Principal",
-        ["Dashboard", "Agente LLM (Gemini)", "OpenRouter (Multi-Modelos)", "Automação & Scraping", "Configurações"]
+        ["Centro de Comando", "Dashboard", "Agente LLM (Gemini)", "OpenRouter (Multi-Modelos)", "Automação & Scraping", "Configurações"]
     )
     
     add_vertical_space(5)
     st.sidebar.info("Carvalima Agent Central v1.0")
 
-    if menu == "Dashboard":
+    if menu == "Centro de Comando":
+        st.title("🕹️ Centro de Comando (Orquestrador)")
+        st.write("Dê uma ordem complexa e o Gemini Pro decidirá como executar.")
+        
+        from agents.orchestrator import CentralOrchestrator
+        
+        user_input = st.text_input("Comando:", placeholder="Ex: Pesquise a cotação do dólar e me diga se é um bom momento para comprar.")
+        if st.button("Executar Ordem"):
+            if user_input:
+                with st.spinner("O Orquestrador está analisando e delegando tarefas..."):
+                    try:
+                        orch = CentralOrchestrator()
+                        result = orch.decide_and_execute(user_input)
+                        st.markdown("### Resultado Final:")
+                        st.write(result)
+                    except Exception as e:
+                        st.error(f"Erro na execução: {e}")
+            else:
+                st.warning("Por favor, digite um comando.")
+
+    elif menu == "Dashboard":
         st.title("📊 Painel de Controle")
         st.write("Bem-vindo à Central de Agentes Carvalima.")
         
