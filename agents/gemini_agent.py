@@ -45,9 +45,10 @@ class GeminiAgent:
             except ImportError:
                 from openrouter_agent import OpenRouterAgent
             
-            # Deixa o OpenRouterAgent lidar com o mapeamento de IDs
-            self.or_agent = OpenRouterAgent(model_name=self.model_name)
-            print(f"[{self.model_name}] Usando ponte OpenRouter.")
+            # Usamos o modelo 'free' do OpenRouter como ponte principal
+            # Ele é gratuito, rápido e suporta raciocínio (reasoning)
+            self.or_agent = OpenRouterAgent(model_name="openrouter/free")
+            print(f"[{self.model_name}] Usando ponte OpenRouter (Modelo Free com Raciocínio).")
         except Exception as e:
             print(f"Erro ao inicializar ponte: {e}")
 

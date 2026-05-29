@@ -8,7 +8,8 @@ class OpenRouterAgent:
         "gemini-1.5-flash": "google/gemini-2.0-flash-001",
         "gemini-1.5-pro": "google/gemini-pro-1.5-exp",
         "free": "openrouter/free",
-        "auto": "openrouter/free"
+        "auto": "openrouter/free",
+        "google/gemini-pro-1.5": "google/gemini-pro-1.5-exp"
     }
 
     def __init__(self, model_name="openrouter/free"):
@@ -28,7 +29,6 @@ class OpenRouterAgent:
     def ask(self, prompt, use_reasoning=True):
         try:
             # Prepara os parâmetros da requisição conforme a nova doc fornecida
-            # O OpenRouter aceita parâmetros extras no corpo via extra_body
             payload = {
                 "model": self.model_name,
                 "messages": [{"role": "user", "content": prompt}],
@@ -39,12 +39,14 @@ class OpenRouterAgent:
             }
             
             # Ativa o raciocínio se solicitado (Chain of Thought)
+            # Conforme a doc: "reasoning": {"enabled": True}
             if use_reasoning:
                 payload["extra_body"] = {"reasoning": {"enabled": True}}
 
             response = self.client.chat.completions.create(**payload)
             
-            # Retorna o conteúdo da resposta
+            # A resposta pode conter reasoning_details se suportado pelo modelo
+            # content = response.choices[0].message.content
             return response.choices[0].message.content
         except Exception as e:
             return f"Erro no OpenRouter ({self.model_name}): {str(e)}"
@@ -52,8 +54,6 @@ class OpenRouterAgent:
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
-    # Testando com o modelo gratuito e raciocínio ativado
     agent = OpenRouterAgent(model_name="free")
-    print(f"--- Testando OpenRouter Free com Raciocínio ---")
-    print(f"Modelo: {agent.model_name}")
-    print(agent.ask("Quanto é 25 * 14? Explique o passo a passo."))
+    print(f"Testando com: {agent.model_name}")
+    print(agent.ask("Explique brevemente o que é um multiagente."))
