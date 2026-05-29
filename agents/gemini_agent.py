@@ -4,10 +4,22 @@ import os
 class GeminiAgent:
     def __init__(self, model_name="gemini-1.5-flash"):
         api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in environment variables.")
         
-        genai.configure(api_key=api_key)
+        # Tenta configurar o genai. 
+        # Se a API Key existir, usa ela. 
+        # Se não, o SDK tentará encontrar credenciais ADC (CLI/Google Cloud) automaticamente.
+        if api_key:
+            genai.configure(api_key=api_key)
+            print("Autenticado via API Key.")
+        else:
+            # Ao não passar api_key, o SDK busca o Application Default Credentials (ADC)
+            # que é o que o 'gcloud auth application-default login' configura.
+            try:
+                genai.configure()
+                print("Tentando autenticação via Google Cloud CLI (ADC)...")
+            except Exception as e:
+                print(f"Aviso: Não foi possível configurar autenticação automática: {e}")
+        
         self.model = genai.GenerativeModel(model_name)
     
     def ask(self, prompt):
