@@ -8,10 +8,12 @@ import json
 
 class CentralOrchestrator:
     def __init__(self):
-        # Como a chave do Gemini direto falhou, usamos o OpenRouter como Cérebro
-        # Ele também tem acesso aos modelos do Google (Gemini) e muitos outros.
-        self.brain = OpenRouterAgent(model_name="google/gemini-2.0-flash-001")
-        # O navegador autônomo também usará o OpenRouter para raciocínio
+        # Usamos o GeminiAgent como "Cérebro"
+        # Ele é híbrido: Tenta usar seu Login Pro (CLI) primeiro, 
+        # e se der erro de chave, pula automaticamente para o OpenRouter.
+        self.brain = GeminiAgent(model_name="gemini-1.5-pro")
+        
+        # O navegador também usa a lógica híbrida para não travar
         self.browser = AutonomousBrowser(model_name="google/gemini-2.0-flash-001")
     
     def decide_and_execute(self, user_input):
@@ -27,18 +29,21 @@ class CentralOrchestrator:
         analysis_prompt = f"{system_prompt}\n\nPedido do usuário: {user_input}"
         decision_json_raw = self.brain.ask(analysis_prompt)
         
+        # Se o cérebro retornar um erro em vez de JSON
+        if "Erro" in decision_json_raw and "{" not in decision_json_raw:
+             return decision_json_raw
+
         # Limpa possível formatação de markdown do JSON
         decision_json_raw = decision_json_raw.replace("```json", "").replace("```", "").strip()
         
         try:
             decision = json.loads(decision_json_raw)
         except:
-            return f"Erro na orquestração: O cérebro não retornou um plano válido.\nResposta: {decision_json_raw}"
+            return f"Orquestrador: Não consegui processar o plano.\nResposta: {decision_json_raw}"
         
         if decision["decision"] == "browser":
             return asyncio.run(self.browser.run_task(decision["instructions"]))
         elif decision["decision"] == "scraper":
-            # Extrai URL se necessário ou usa o scraper simples
             return f"Plano: {decision['reason']}. Usando Scraper para: {decision['instructions']}"
         else:
             return self.brain.ask(user_input)
@@ -47,4 +52,4 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     orch = CentralOrchestrator()
-    print(orch.decide_and_execute("Pesquise o preço do iPhone 15 no site da Amazon e me dê o valor."))
+    print(orch.decide_and_execute("Qual a temperatura em São Paulo?"))
