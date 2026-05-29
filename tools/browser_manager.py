@@ -4,9 +4,22 @@ import asyncio
 import os
 
 class AutonomousBrowser:
-    def __init__(self, model_name="gemini-1.5-flash"):
-        # Usa Gemini Flash para navegação por ser mais rápido e barato
-        self.llm = ChatGoogleGenerativeAI(model=model_name)
+    def __init__(self, model_name="google/gemini-2.0-flash-001"):
+        # Se a chave do OpenRouter estiver presente, usamos ela via OpenAI wrapper no LangChain
+        from langchain_openai import ChatOpenAI
+        
+        api_key = os.getenv("api-key-openrouter") or os.getenv("OPENROUTER_API_KEY")
+        
+        if api_key:
+            self.llm = ChatOpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key,
+                model=model_name
+            )
+        else:
+            # Fallback para Gemini direto
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            self.llm = ChatGoogleGenerativeAI(model=model_name)
     
     async def run_task(self, task_description):
         agent = Agent(

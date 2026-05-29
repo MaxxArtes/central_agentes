@@ -8,10 +8,11 @@ import json
 
 class CentralOrchestrator:
     def __init__(self):
-        # O "Cérebro" é o Gemini Pro via CLI ou API Key
-        # Usamos o GeminiAgent que já sabe lidar com GEMINI_API_KEY ou ADC
-        self.brain = GeminiAgent(model_name="gemini-1.5-pro")
-        self.browser = AutonomousBrowser(model_name="gemini-1.5-flash")
+        # Como a chave do Gemini direto falhou, usamos o OpenRouter como Cérebro
+        # Ele também tem acesso aos modelos do Google (Gemini) e muitos outros.
+        self.brain = OpenRouterAgent(model_name="google/gemini-2.0-flash-001")
+        # O navegador autônomo também usará o OpenRouter para raciocínio
+        self.browser = AutonomousBrowser(model_name="google/gemini-2.0-flash-001")
     
     def decide_and_execute(self, user_input):
         system_prompt = """
