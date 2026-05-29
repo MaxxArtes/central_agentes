@@ -45,13 +45,9 @@ class GeminiAgent:
             except ImportError:
                 from openrouter_agent import OpenRouterAgent
             
-            # Mapeamento robusto de IDs para OpenRouter
-            or_model = "google/gemini-2.0-flash-001" # Default seguro e rápido
-            if "pro" in self.model_name.lower():
-                or_model = "google/gemini-pro-1.5-exp" # Versão experimental costuma estar ativa
-            
-            self.or_agent = OpenRouterAgent(model_name=or_model)
-            print(f"[{self.model_name}] Usando ponte OpenRouter ({or_model}).")
+            # Deixa o OpenRouterAgent lidar com o mapeamento de IDs
+            self.or_agent = OpenRouterAgent(model_name=self.model_name)
+            print(f"[{self.model_name}] Usando ponte OpenRouter.")
         except Exception as e:
             print(f"Erro ao inicializar ponte: {e}")
 
@@ -69,7 +65,7 @@ class GeminiAgent:
             )
             return response.text
         except Exception as e:
-            # Se falhar o login (ex: token expirado), tenta a ponte OpenRouter imediatamente
+            # Se falhar o login, tenta a ponte OpenRouter imediatamente
             print(f"Erro no login nativo: {e}. Mudando para OpenRouter...")
             self._setup_openrouter_bridge()
             if hasattr(self, 'or_agent'):
@@ -80,4 +76,4 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     agent = GeminiAgent()
-    print(agent.ask("Diga 'OK'."))
+    print(agent.ask("Olá!"))
