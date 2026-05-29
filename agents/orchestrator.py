@@ -8,7 +8,8 @@ import json
 
 class CentralOrchestrator:
     def __init__(self):
-        # O "Cérebro" é o Gemini Pro via CLI (limites altos)
+        # O "Cérebro" é o Gemini Pro via CLI ou API Key
+        # Usamos o GeminiAgent que já sabe lidar com GEMINI_API_KEY ou ADC
         self.brain = GeminiAgent(model_name="gemini-1.5-pro")
         self.browser = AutonomousBrowser(model_name="gemini-1.5-flash")
     
