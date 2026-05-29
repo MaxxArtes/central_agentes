@@ -47,7 +47,7 @@ class GeminiAgent:
             
             # Mapeamento robusto de IDs para OpenRouter
             or_model = "google/gemini-2.0-flash-001" # Default seguro e rápido
-            if "pro" in self.model_name:
+            if "pro" in self.model_name.lower():
                 or_model = "google/gemini-pro-1.5-exp" # Versão experimental costuma estar ativa
             
             self.or_agent = OpenRouterAgent(model_name=or_model)
