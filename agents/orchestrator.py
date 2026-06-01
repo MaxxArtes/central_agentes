@@ -14,6 +14,9 @@ from agents.discord_agent import DiscordAgent
 from agents.expansion_agents import NotionAgent, TelegramAgent, SlackAgent
 from agents.colab_agent import ColabAgent
 from agents.database_agent import DatabaseAgent
+from agents.apify_agent import ApifyAgent
+from agents.skyvern_agent import SkyvernAgent
+from agents.base44_agent import Base44Agent
 from tools.scraper import SimpleScraper
 from tools.browser_manager import AutonomousBrowser
 from utils.context_manager import ContextManager
@@ -22,7 +25,7 @@ import json
 
 class CentralOrchestrator:
     def __init__(self):
-        # Gerenciador de Memória Compartilhada
+        # Gerenciador de Memória Compartilhada (Volátil)
         self.memory = ContextManager()
         
         # O Maestro agora é o Gemini Nativo via CLI
@@ -44,156 +47,184 @@ class CentralOrchestrator:
         self.telegram_agent = TelegramAgent()
         self.slack_agent = SlackAgent()
         self.colab_agent = ColabAgent()
-        self.db_agent = DatabaseAgent() # Especialista em Banco de Dados
+        self.db_agent = DatabaseAgent() 
+        self.apify_agent = ApifyAgent()
+        self.skyvern_agent = SkyvernAgent()
+        self.base44_agent = Base44Agent()
         
         try:
             self.fast_agent = GroqAgent()
         except:
             self.fast_agent = None
     
-    def decide_and_execute(self, user_input):
-        # Recupera o contexto histórico para o cérebro
-        history_context = self.memory.get_context_summary()
-        
-        system_prompt = f"""
-        Você é o Orquestrador da Central de Agentes Carvalima.
-        Sua missão é triar o pedido do usuário e decidir qual ferramenta deve ser ativada.
-        
-        {history_context}
-        
-        REGRAS OBRIGATÓRIAS:
-        1. RESPONDA APENAS UM JSON PURO. NADA DE TEXTO ANTES OU DEPOIS.
-        2. O JSON DEVE TER EXATAMENTE ESTAS CHAVES: "decision", "reason", "instructions".
-        
-        VALORES PARA "decision":
-        - "database": Use para salvar dados permanentemente, fazer buscas em logs antigos ou executar SQL.
-        - "quick_search": Busca rápida.
-        - "browser": Navegação complexa.
-        - "colab": Notebooks Google.
-        - "notion": Notas e wikis.
-        - "telegram/slack/discord": Comunicação.
-        - "google_workspace": Drive/Docs.
-        - "github": GitHub tasks.
-        - "filesystem": Arquivos locais.
-        - "ide_control": VS Code.
-        - "docker": Containers.
-        - "deep_chat": Análise complexa.
+    def decide_and_execute(self, user_input, max_steps=10):
         """
+        Executa um loop autônomo de Raciocínio -> Ação -> Observação.
+        Utiliza memória de longo prazo (Supabase) para contexto histórico.
+        """
+        # Recupera o contexto da memória de longo prazo (Supabase) + histórico recente
+        long_term_history = self.db_agent.get_recent_context(limit=10)
+        execution_log = []
         
-        # Adiciona a entrada do usuário à memória volátil
-        self.memory.add_interaction("user", user_input)
+        # Monitoramento de recursos
+        apify_credits = self.apify_agent.get_remaining_credits()
+        skyvern_active = self.skyvern_agent.is_active()
+        base44_active = self.base44_agent.is_active()
         
-        # Se o banco estiver ativo, salva permanentemente
-        if self.db_agent.is_active():
-            self.db_agent.save_interaction("user", user_input)
-        
-        analysis_prompt = f"{system_prompt}\n\nPedido do usuário: {user_input}"
-        
-        # O cérebro decide usando o CLI com consciência do histórico
-        decision_json_raw = self.brain.ask(analysis_prompt)
-        
-        # Limpa formatação Markdown do JSON
-        decision_json_raw = decision_json_raw.replace("```json", "").replace("```", "").strip()
-        
-        try:
-            # Tenta decodificar a decisão do cérebro principal
-            decision = json.loads(decision_json_raw)
-        except json.JSONDecodeError as e:
-            print(f"Erro ao decodificar JSON do cérebro principal (Gemini CLI): {e}. Acionando fallback para o cérebro rápido (Groq).")
-            # Se o cérebro principal falhar (ex: limite de taxa), usa o Groq como fallback para tomar a decisão
-            try:
-                if not self.fast_agent:
-                    raise ValueError("Agente rápido (Groq) não está disponível para fallback.")
-                decision_json_raw = self.fast_agent.ask(analysis_prompt)
-                decision_json_raw = decision_json_raw.replace("```json", "").replace("```", "").strip()
-                decision = json.loads(decision_json_raw)
-            except Exception as fallback_e:
-                # Se até o fallback falhar, recorre ao modo chat simples
-                return self._fallback_to_chat(history_context, user_input, str(fallback_e))
-
-        try:
-            result = ""
-            if decision["decision"] == "database" and self.db_agent.is_active():
-                # NOTA: O DatabaseAgent atual só suporta 'save_interaction'. A decisão de "executar query" do LLM será salva como um log.
-                result = f"🗄️ **Banco de Dados (Log):**\n\n" + self.db_agent.save_interaction("log", decision["instructions"])
-
-            elif decision["decision"] == "colab":
-                result = f"🧪 **Google Colab:**\n\n" + self.colab_agent.create_notebook("Notebook_Analise", decision["instructions"])
-
-            elif decision["decision"] == "notion":
-                result = f"📔 **Notion:**\n\n" + self.notion_agent.create_page("ID_DA_PAGINA_PAI", decision["instructions"])
+        for step in range(1, max_steps + 1):
+            steps_taken = "\n".join([f"Passo {i}: {log}" for i, log in enumerate(execution_log, 1)])
             
-            elif decision["decision"] == "telegram":
-                result = f"✈️ **Telegram:**\n\n" + self.telegram_agent.send_message(decision["instructions"])
+            system_prompt = f"""
+            Você é o Cérebro do Orquestrador Autônomo (Modo Manus).
+            Objetivo Final: {user_input}
+            
+            {long_term_history}
+            
+            PROGRESSO DA TAREFA ATUAL:
+            {steps_taken if steps_taken else "Iniciando tarefa agora."}
+            
+            RECURSOS DISPONÍVEIS:
+            - Apify Credits: ${apify_credits} (Extração massiva)
+            - Skyvern Status: {"Ativo" if skyvern_active else "Inativo"} (Navegação visual complexa)
+            - Base44 Status: {"Ativo" if base44_active else "Inativo"} (App de IA/Logística)
+            - Local Browser: Grátis (Navegação rápida)
+            
+            INSTRUÇÕES:
+            1. Analise o progresso e decida a PRÓXIMA MELHOR AÇÃO.
+            2. Se uma ferramenta falhar, TENTE OUTRA estratégia.
+            3. Responda APENAS um JSON puro com: "decision", "reason", "instructions".
+            
+            DECISÕES POSSÍVEIS:
+            - "finish": {{"instructions": "Resposta final detalhada"}}
+            - "browser": {{"instructions": "Tarefa para o navegador local"}}
+            - "skyvern": {{"url": "URL", "prompt": "Instrução visual"}}
+            - "apify": {{"actor_id": "ID", "input": {{"key": "value"}}}}
+            - "base44_call": {{"integration_id": "ID", "action": "ação", "params": {{}}}}
+            - "base44_data": {{"entity": "nome", "action": "get|create", "record_id": "opcional", "data": {{}}}}
+            - "quick_search": {{"instructions": "Busca"}}
+            - "file_write": {{"instructions": {{"path": "nome.txt", "content": "conteúdo"}}}}
+            - "database_search": {{"query": "termo"}} - Use para buscar em memórias antigas no Supabase.
+            """
+            
+            decision_json_raw = self.brain.ask(system_prompt)
+            decision_json_raw = decision_json_raw.replace("```json", "").replace("```", "").strip()
+            
+            try:
+                decision = json.loads(decision_json_raw)
+            except Exception as e:
+                if self.fast_agent:
+                    decision_json_raw = self.fast_agent.ask(system_prompt)
+                    decision_json_raw = decision_json_raw.replace("```json", "").replace("```", "").strip()
+                    try:
+                        decision = json.loads(decision_json_raw)
+                    except:
+                        return self._fallback_to_chat(long_term_history, user_input, "Falha no JSON.")
+                else:
+                    return self._fallback_to_chat(long_term_history, user_input, str(e))
+
+            print(f"[PASSO {step}] {decision['decision']}: {decision['reason']}")
+            
+            try:
+                result = ""
+                d_type = decision["decision"]
+                instr = decision.get("instructions", {})
+
+                if d_type == "finish":
+                    final_res = instr
+                    # Persistência final na Memória de Longo Prazo e Volátil
+                    self.db_agent.save_interaction("user", user_input)
+                    self.db_agent.save_interaction("assistant", final_res)
+                    self.memory.add_interaction("user", user_input)
+                    self.memory.add_interaction("assistant", final_res)
+                    return final_res
+
+                elif d_type == "database_search":
+                    result = str(self.db_agent.search_memory(decision.get("query", "")))
+
+                elif d_type == "base44_call":
+                    result = self.base44_agent.call_integration(
+                        decision.get("integration_id"),
+                        decision.get("action"),
+                        decision.get("params", {})
+                    )
+
+                elif d_type == "base44_data":
+                    entity = decision.get("entity")
+                    action = decision.get("action", "get")
+                    if action == "get":
+                        result = self.base44_agent.get_entity(entity, decision.get("record_id"))
+                    else:
+                        result = self.base44_agent.create_record(entity, decision.get("data", {}))
+
+                elif d_type == "skyvern":
+                    url = decision.get("url")
+                    prompt = decision.get("prompt")
+                    result = self.skyvern_agent.run_task(url, prompt)
+
+                elif d_type == "apify":
+                    actor_id = decision.get("actor_id")
+                    actor_input = decision.get("input", {})
+                    result = self.apify_agent.run_actor(actor_id, actor_input)
+                    apify_credits = self.apify_agent.get_remaining_credits()
+
+                elif d_type == "browser":
+                    result = asyncio.run(self.browser.run_task(instr))
+
+                elif d_type == "quick_search":
+                    result = self.search_agent.quick_search(instr)
+
+                elif d_type == "file_write":
+                    path = instr.get("path", "output.txt") if isinstance(instr, dict) else "output.txt"
+                    content = instr.get("content", "") if isinstance(instr, dict) else str(instr)
+                    result = self.file_agent.write_file(path, content)
+
+                elif d_type == "file_read":
+                    result = self.file_agent.read_file(instr)
+
+                elif d_type == "file_list":
+                    result = str(self.file_agent.list_files(instr))
+
+                elif d_type == "github_create_repo":
+                    result = self.github_agent.create_repo(instr)
+
+                elif d_type == "github_list_repos":
+                    result = str(self.github_agent.list_my_repos())
+
+                elif d_type == "messenger":
+                    plat = instr.get("platform", "telegram").lower() if isinstance(instr, dict) else "telegram"
+                    msg = instr.get("message", "") if isinstance(instr, dict) else str(instr)
+                    if plat == "telegram": result = self.telegram_agent.send_message(msg)
+                    elif plat == "slack": result = self.slack_agent.post_message("#geral", msg)
+                    elif plat == "discord": result = self.discord_agent.send_message(msg)
+
+                elif d_type == "docker_list":
+                    result = str(self.docker_agent.list_containers())
+
+                elif d_type == "google_doc_create":
+                    title = instr.get("title", "Novo Doc")
+                    content = instr.get("content", "")
+                    result = self.google_agent.create_doc(title, content)
+
+                elif d_type == "ide_open":
+                    result = self.ide_agent.open_in_code(instr)
+
+                elif d_type == "nlp_analyze":
+                    result = self.hf_agent.ask(instr)
+
+                else:
+                    result = f"Comando '{d_type}' não reconhecido."
+
+                execution_log.append(f"Ação: {d_type} | Resultado: {str(result)[:500]}")
                 
-            elif decision["decision"] == "slack":
-                result = f"🐝 **Slack:**\n\n" + self.slack_agent.post_message("#geral", decision["instructions"])
+            except Exception as e:
+                execution_log.append(f"Erro no Passo {step}: {str(e)}")
 
-            elif decision["decision"] == "docker":
-                instr = decision["instructions"].lower()
-                if "liste" in instr or "list" in instr:
-                    result = f"🐳 **Docker Status:**\n\n" + str(self.docker_agent.list_containers())
-                else:
-                    result = "Comando Docker reconhecido, mas o Docker Desktop pode estar desligado."
-
-            elif decision["decision"] == "ide_control":
-                instr = decision["instructions"].lower()
-                if "abra" in instr or "open" in instr:
-                    target = decision["instructions"].split("'")[1] if "'" in decision["instructions"] else decision["instructions"].split()[-1]
-                    result = f"🖥️ **IDE Control:**\n\n" + self.ide_agent.open_in_code(target)
-                elif "instale" in instr or "install" in instr:
-                    ext_id = decision["instructions"].split()[-1]
-                    result = f"📦 **IDE Setup:**\n\n" + self.ide_agent.install_extension(ext_id)
-                else:
-                    result = "Comando de IDE não reconhecido."
-
-            elif decision["decision"] == "filesystem":
-                instr = decision["instructions"].lower()
-                if "leia" in instr or "read" in instr:
-                    filename = decision["instructions"].split("'")[1] if "'" in decision["instructions"] else decision["instructions"].split()[-1]
-                    result = f"📄 **Conteúdo do Arquivo ({filename}):**\n\n" + self.file_agent.read_file(filename)
-                elif "liste" in instr or "list" in instr:
-                    res = self.file_agent.list_files()
-                    result = f"📁 **Arquivos no diretório:**\n\n" + ", ".join(res["items"]) if isinstance(res, dict) else res
-                elif "crie" in instr or "escreva" in instr or "write" in instr:
-                    result = f"💾 **Status do Filesystem:**\n\n" + self.file_agent.write_file("novo_arquivo.txt", "Conteúdo gerado via Orquestrador.")
-                else:
-                    result = "Tarefa de sistema de arquivos não reconhecida."
-
-            elif decision["decision"] == "github" and self.github_agent.is_active():
-                # Lógica de GitHub
-                instr = decision["instructions"].lower()
-                if "crie um repositório" in instr or "create repo" in instr:
-                    name = user_input.split()[-1].replace("'","").replace('"',"")
-                    result = f"🛠️ **GitHub (API):**\n\n" + self.github_agent.create_repo(name, description="Criado via Agente Gemini")
-                elif "liste" in instr or "list" in instr:
-                    result = f"📂 **Seus Repositórios:**\n\n" + "\n".join(self.github_agent.list_my_repos())
-                else:
-                    result = "Comando GitHub reconhecido, mas ação não mapeada."
-
-            elif decision["decision"] == "nlp_specialist":
-                if "traduz" in user_input.lower() or "traduza" in user_input.lower():
-                    result = f"🌍 **Tradução Especializada (HF):**\n\n" + self.hf_agent.translate(user_input)
-                else:
-                    result = f"🤖 **Análise Hugging Face:**\n\n" + self.hf_agent.ask(decision["instructions"])
-
-            elif decision["decision"] == "fast_chat" and self.fast_agent:
-                result = f"⚡ **Resposta Rápida (Groq):**\n\n" + self.fast_agent.ask(user_input)
-                
-            else:
-                # Para deep_chat ou fallback
-                result = self.brain.ask(f"{history_context}\n\nUsuário: {user_input}")
-
-            # Salva o resultado na memória para a próxima iteração
-            self.memory.add_interaction("assistant", str(result))
-            return result
-
-        except Exception as e:
-            return self._fallback_to_chat(history_context, user_input, str(e))
+        final_summary = f"Limite de {max_steps} passos atingido. Resumo:\n\n" + "\n".join(execution_log)
+        self.memory.add_interaction("assistant", final_summary)
+        return final_summary
 
     def _fallback_to_chat(self, history_context, user_input, error_msg):
-        """Fallback final para modo chat quando todas as outras lógicas falham."""
-        print(f"ERRO CRÍTICO NO ORQUESTRADOR: {error_msg}. Recorrendo ao modo chat.")
+        print(f"FALLBACK: {error_msg}")
         fallback_res = self.brain.ask(f"{history_context}\n\nUsuário: {user_input}")
         self.memory.add_interaction("assistant", fallback_res)
         return fallback_res
@@ -202,4 +233,4 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
     orch = CentralOrchestrator()
-    print(orch.decide_and_execute("Vá ao site do Google e pesquise o valor do dólar agora."))
+    print(orch.decide_and_execute("Qual a capital da França?"))
