@@ -27,6 +27,20 @@ services:
     command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
     restart: always
 
+  # Listener para Auto-Deploy (GitHub Webhook)
+  webhook-deploy:
+    build: .
+    container_name: agent-central-webhook
+    ports:
+      - "9000:9000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock # Permite que o container gerencie o Docker do host
+    command: python webhook_listener.py
+    restart: always
+
 networks:
   default:
     name: agent-network
