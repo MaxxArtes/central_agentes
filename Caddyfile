@@ -1,0 +1,18 @@
+{
+    email maxxartes@outlook.com
+}
+
+maxymus.dev.br {
+    # Redireciona para o Dashboard Streamlit (todo o resto)
+    reverse_proxy dashboard:8501
+}
+
+api.maxymus.dev.br {
+    # Redireciona para a API Gateway (Bubble)
+    reverse_proxy api-gateway:8000
+}
+
+webhook.maxymus.dev.br {
+    # Redireciona para o Listener de Deploy
+    reverse_proxy webhook-deploy:9000
+}

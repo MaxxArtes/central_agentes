@@ -41,6 +41,25 @@ services:
     command: python webhook_listener.py
     restart: always
 
+  # Caddy para SSL Automático
+  caddy:
+    image: caddy:latest
+    container_name: agent-central-ssl
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - agent-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
 networks:
   default:
     name: agent-network
