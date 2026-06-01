@@ -13,8 +13,6 @@ services:
       - .:/app
     command: python api_server.py
     restart: always
-    networks:
-      - agent-network
 
   # Dashboard Streamlit (Para gerenciamento visual)
   dashboard:
@@ -28,8 +26,6 @@ services:
       - .:/app
     command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
     restart: always
-    networks:
-      - agent-network
 
   # Listener para Auto-Deploy (GitHub Webhook)
   webhook-deploy:
@@ -44,8 +40,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: python webhook_listener.py
     restart: always
-    networks:
-      - agent-network
 
   # Caddy para SSL Automático
   caddy:
@@ -59,13 +53,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
-    networks:
-      - agent-network
 
 volumes:
   caddy_data:
   caddy_config:
-
-networks:
-  agent-network:
-    driver: bridge
