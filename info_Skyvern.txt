@@ -1,0 +1,91 @@
+O Skyvern mudou o seu modelo de cobrança para um sistema muito melhor: agora eles oferecem um plano gratuito permanente que renova todo mês, em vez de apenas um bônus único de cadastro.No plano Free ($0/mês), você ganha 5.000 créditos mensais fixos para experimentar e rodar seus testes.Abaixo está o funcionamento prático de como você pode usar esse limite no seu projeto:📊 O que dá para fazer com o Plano Gratuito do Skyvern?Cota Mensal: 5.000 créditos que resetam a cada ciclo de faturamento.Capacidade Estimada: De acordo com a tabela oficial de preços do Skyvern, esses créditos rendem cerca de 170 ações/navegações por mês.Execuções Simultâneas: Você pode rodar 1 automação por vez (se disparar duas juntas via API, a segunda fica na fila esperando a primeira acabar).Recursos inclusos: Acesso total a Webhooks para integrar com seu backend e suporte da comunidade
+☁️ Como funciona o Plano Nuvem Gratuito (Free Tier)O plano é renovado automaticamente todo mês.Créditos Mensais: 5.000 créditos (o que equivale a aproximadamente 170 ações de navegação).Custo para você: $0,00.Concorrência: 1 tarefa por vez (se enviar 5 requisições, elas entram numa fila e são executadas uma após a outra).⚡ Estratégia para Economizar Créditos na NuvemComo 170 ações por mês podem acabar rápido (uma tarefa simples pode gastar de 3 a 5 ações), aqui estão as regras de ouro para fazer seus créditos renderem sem sobrecarregar seu servidor:1. Use URLs Diretas (Evite "Pesquisar no Google")❌ Caro: "Vá no Google, pesquise o preço do iPhone 15 na Amazon e me diga."Gasto: O agente gasta ações pesquisando, escolhendo o link, clicando, esperando carregar. (~5-8 ações).✅ Econômico: "Acesse amazon.com.br/dp/B0CHH6X6H2 e extraia o preço."Gasto: O agente abre direto o alvo e extrai. (~1-2 ações).2. Use Webhooks (Não fique perguntando "Já acabou?")Para não gastar processamento do seu servidor verificando o status da tarefa a cada segundo (polling), configure um Webhook:Você envia a tarefa para a API da Skyvern.Seu servidor "esquece" e vai fazer outras coisas.Quando a Skyvern terminar, ela envia um POST para o seu servidor com os dados prontos (JSON).3. Seja Específico na ExtraçãoDiga exatamente o nome dos campos que você quer.Prompt: "Extraia o product_price, shipping_cost e delivery_date."Isso evita que o agente tente navegar por páginas irrelevantes procurando dados perdidos.
+A API de nuvem do Skyvern fornece acesso a um conjunto de ferramentas projetado para que você crie automações de navegador sem precisar programar os cliques ou gerenciar seletores HTML.Ao enviar uma requisição para a nuvem deles, a API te dá acesso aos seguintes recursos principais:🌐 1. Agente de Navegação Autônomo (O "Cérebro")Você não precisa dizer "clique no botão X" ou "espere 2 segundos". Você envia um comando em texto puro (Prompt) e a API gerencia o navegador na nuvem para:Interagir com elementos: Clicar em botões, preencher formulários, selecionar menus e fazer login.Resolver problemas em tempo real: Se o site mudar o layout ou mover um botão de lugar, o agente de IA usa visão computacional para localizá-lo e continuar a tarefa.Contornar bloqueios: A infraestrutura em nuvem deles lida automaticamente com proxies e algumas proteções antibot básicas.📊 2. Extração de Dados Estruturados (Web Scraping Inteligente)Você pode transformar qualquer site público em uma API de dados limpos (JSON). Você define o esquema (Schema) do que quer receber, e a API faz o resto:Extração visual: Coleta preços, descrições, tabelas, imagens e links com base no contexto visual da página.Navegação profunda: Se os dados estiverem espalhados em várias páginas ou exigirem cliques em paginações (Ex: "Próxima página"), o agente navega de forma autônoma para coletar tudo.Normalização: Entrega os dados formatados exatamente no JSON estruturado que o seu servidor precisa.📁 3. Gestão e Controle de Tarefas (Endpoints da API)Os endpoints REST que você pode chamar a partir do seu servidor incluem:POST /v1/tasks (Criar Tarefa): Inicia uma nova automação enviando a URL inicial, as instruções (prompt) e, opcionalmente, as credenciais de login codificadas de forma segura.GET /v1/tasks/{task_id} (Consultar Status): Retorna o estado atual da tarefa (Executando, Concluída, Falhou) e o progresso passo a passo.POST /v1/tasks/{task_id}/terminate (Interromper): Cancela uma tarefa longa em execução na nuvem para evitar desperdício de créditos.🪝 4. Integração Assíncrona com WebhooksComo você quer economizar recursos no seu servidor, o sistema de Webhooks da API do Skyvern é o recurso mais valioso. Ele permite receber:Notificação de Conclusão: O Skyvern avisa o seu servidor assim que a tarefa termina e envia todos os dados extraídos de uma vez.Capturas de Tela (Screenshots) e Vídeos: A API disponibiliza links para imagens ou gravações em vídeo de toda a navegação feita pelo agente, o que ajuda muito a debugar se algo der errado no site alvo.Logs de Execução: Relatórios textuais detalhando cada decisão que a IA tomou enquanto navegava.Em resumo, a API te dá um navegador completo controlado por IA na nuvem, onde você só precisa enviar uma URL com uma instrução e seu servidor recebe de volta os dados estruturados ou a confirmação de que a ação foi realizada.
+você consegue usar todas as integrações através da API. O Skyvern foi desenvolvido seguindo o conceito "API-first", o que significa que absolutamente tudo o que o painel web ou os sistemas parceiros fazem é executado por baixo dos panos chamando os mesmos endpoints que estarão disponíveis para o seu código.Abaixo estão os detalhes de como você aciona essas integrações enviando parâmetros simples na sua requisição HTTP:🔑 1. Integrações de Segurança e Cofres de Senhas (Vaults)O Skyvern possui integração direta com gerenciadores como 1Password, Bitwarden e Azure Key Vault. Isso evita que você exponha suas senhas no código do seu servidor.Como usar via API: Primeiro, você conecta o seu cofre de senhas uma única vez na interface web do Skyvern. Depois, ao criar a tarefa via API, você apenas referencia o ID ou o nome da credencial guardada.O JSON enviado:json{
+  "url": "https://site-com-login.com",
+  "prompt": "Faça login e extraia o relatório",
+  "totp_secret_id": "id-do-seu-autenticador-mfa",
+  "credential_id": "seu-id-do-bitwarden"
+}
+Use o código com cuidado.O Skyvern buscará a senha direto no cofre em tempo real na nuvem, preencherá o formulário e até resolverá o código de autenticação em duas etapas (MFA/TOTP) de forma automática.🌐 2. Integrações de Proxy Avançado (Localização de IP)O Skyvern possui parcerias com grandes redes de proxy (como a Bright Data) prontas para uso na nuvem.Como usar via API: Se você precisar que seu robô simule um acesso vindo de uma região específica para evitar bloqueios ou ver preços locais, basta declarar o parâmetro proxy_location diretamente na chamada da API.O JSON enviado:json{
+  "url": "https://site-alvo.com",
+  "prompt": "Extraia as passagens aéreas",
+  "proxy_location": "BR" 
+}
+Use o código com cuidado.🧠 3. Troca Dinâmica de Motores de IA (LLMs)Uma das integrações mais poderosas é a liberdade de escolher qual inteligência artificial comandará o navegador naquela tarefa específica.Como usar via API: Você pode alternar o parâmetro engine na requisição. Se for uma tarefa simples de formulário, use o motor padrão mais barato (skyvern-1.0). Se for algo extremamente complexo que exige visão computacional profunda, mude para o motor integrado da Anthropic (anthropic-cua), que utiliza as capacidades mais recentes do Claude.⚡ 4. Conectores No-Code (Zapier, Make, n8n)Se em algum momento você quiser ligar o Skyvern a ferramentas como Google Sheets, Slack, Notion ou Gmail sem escrever código no seu backend, essas plataformas no-code usam a própria API do Skyvern para se comunicar.Você pode disparar uma tarefa HTTP do seu servidor e configurar a Skyvern para enviar o Webhook final de resposta para um cenário do Make.com ou n8n, automatizando o fluxo de ponta a ponta sem que seu servidor gaste processamento.📌 Resumo práticoPara o seu servidor leve, a API é a chave mestra. Ao chamar o endpoint principal de criação de tarefas (POST /v1/tasks), você consegue injetar proxies, puxar senhas criptografadas de cofres externos e definir o comportamento do agente apenas enviando propriedades adicionais no objeto JSON
+
+Integrations
+Connect services and more to your agents.
+
+Search integrations...
+All
+Workspace
+Docs
+Agent Orchestrators
+Credentials
+Available
+1Password
+Credentials
+Use your 1Password service account to inject credentials into agent logins.
+
+Configure
+Bitwarden
+Credentials
+Use your Bitwarden vault to source credentials in agent logins.
+
+Configure
+Azure Key Vault
+Credentials
+Pull secrets from Azure Key Vault using a client secret credential.
+
+Configure
+Custom Credential Service
+Credentials
+Point Skyvern at your own HTTP API for credential management.
+
+Configure
+n8n
+Agent Orchestrators
+Trigger Skyvern agents from n8n automations.
+
+Learn more
+Zapier
+Agent Orchestrators
+Run Skyvern agents from Zapier zaps.
+
+Learn more
+Make
+Agent Orchestrators
+Orchestrate Skyvern agents from Make scenarios.
+
+Learn more
+Workato
+Agent Orchestrators
+Embed Skyvern agents in Workato recipes.
+
+Learn more
+Google Docs
+Workspace
+Read and edit Google Docs in your agents.
+
+Request →
+Google Drive
+Workspace
+List and manage files in Google Drive.
+
+Request →
+Notion
+Docs
+Read and write Notion pages and databases.
+
+Request →
+Google Sheets
+Workspace
+Read and write Google Sheets in your agents.
+
+Connect
+Request another integration
+Other
+Don't see what you need? Tell us which integration to build next.
+
+Request →

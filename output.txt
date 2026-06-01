@@ -1,0 +1,1 @@
+Salvar o texto 'O Melhor Filme do Oscar 2024 foi Oppenheimer.' no arquivo 'oscar.txt' no diretório raiz do projeto.
