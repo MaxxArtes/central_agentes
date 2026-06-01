@@ -37,3 +37,4 @@ discord.py>=2.3.0
 # Infrastructure
 docker>=6.1.0
 GitPython>=3.1.0
+hcloud>=2.20.0

@@ -17,6 +17,7 @@ from agents.database_agent import DatabaseAgent
 from agents.apify_agent import ApifyAgent
 from agents.skyvern_agent import SkyvernAgent
 from agents.base44_agent import Base44Agent
+from agents.hetzner_agent import HetznerAgent
 from tools.scraper import SimpleScraper
 from tools.browser_manager import AutonomousBrowser
 from utils.context_manager import ContextManager
@@ -51,6 +52,7 @@ class CentralOrchestrator:
         self.apify_agent = ApifyAgent()
         self.skyvern_agent = SkyvernAgent()
         self.base44_agent = Base44Agent()
+        self.hetzner_agent = HetznerAgent()
         
         try:
             self.fast_agent = GroqAgent()
@@ -70,6 +72,7 @@ class CentralOrchestrator:
         apify_credits = self.apify_agent.get_remaining_credits()
         skyvern_active = self.skyvern_agent.is_active()
         base44_active = self.base44_agent.is_active()
+        hetzner_active = self.hetzner_agent.is_active()
         
         for step in range(1, max_steps + 1):
             steps_taken = "\n".join([f"Passo {i}: {log}" for i, log in enumerate(execution_log, 1)])
@@ -87,6 +90,7 @@ class CentralOrchestrator:
             - Apify Credits: ${apify_credits} (Extração massiva)
             - Skyvern Status: {"Ativo" if skyvern_active else "Inativo"} (Navegação visual complexa)
             - Base44 Status: {"Ativo" if base44_active else "Inativo"} (App de IA/Logística)
+            - Hetzner Status: {"Ativo" if hetzner_active else "Inativo"} (Gerenciamento de Servidores Cloud)
             - Local Browser: Grátis (Navegação rápida)
             
             INSTRUÇÕES:
@@ -101,6 +105,7 @@ class CentralOrchestrator:
             - "apify": {{"actor_id": "ID", "input": {{"key": "value"}}}}
             - "base44_call": {{"integration_id": "ID", "action": "ação", "params": {{}}}}
             - "base44_data": {{"entity": "nome", "action": "get|create", "record_id": "opcional", "data": {{}}}}
+            - "hetzner_infra": {{"action": "list|info|reboot", "server_name": "opcional"}} - Gerenciar infraestrutura cloud.
             - "quick_search": {{"instructions": "Busca"}}
             - "file_write": {{"instructions": {{"path": "nome.txt", "content": "conteúdo"}}}}
             - "database_search": {{"query": "termo"}} - Use para buscar em memórias antigas no Supabase.
@@ -155,6 +160,13 @@ class CentralOrchestrator:
                         result = self.base44_agent.get_entity(entity, decision.get("record_id"))
                     else:
                         result = self.base44_agent.create_record(entity, decision.get("data", {}))
+
+                elif d_type == "hetzner_infra":
+                    action = decision.get("action", "list")
+                    s_name = decision.get("server_name")
+                    if action == "list": result = str(self.hetzner_agent.list_servers())
+                    elif action == "info": result = str(self.hetzner_agent.get_server_info(s_name))
+                    elif action == "reboot": result = self.hetzner_agent.reboot_server(s_name)
 
                 elif d_type == "skyvern":
                     url = decision.get("url")
